@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erro no Pagamento</title>
+</head>
+<body>
+    <div id="error-container">
+        <h1>❌ Erro no Pagamento</h1>
+        
+        <div id="error-message">
+            <h2>Ops! Algo deu errado</h2>
+            <p id="error-description">Ocorreu um erro ao processar seu pagamento.</p>
+        </div>
+
+        <div id="error-details" style="display:none;">
+            <h3>Detalhes do Erro</h3>
+            <p><strong>ID do Pagamento:</strong> <span id="payment-id"></span></p>
+            <p><strong>Código do Erro:</strong> <span id="error-code"></span></p>
+            <p><strong>Descrição Técnica:</strong> <span id="technical-error"></span></p>
+        </div>
+
+        <div id="common-solutions">
+            <h3>Possíveis Soluções</h3>
+            <ul>
+                <li><strong>Cartão Recusado:</strong> Verifique os dados do cartão, limite disponível ou entre em contato com seu banco</li>
+                <li><strong>Dados Incorretos:</strong> Confira se todos os dados foram preenchidos corretamente</li>
+                <li><strong>Problema de Conexão:</strong> Verifique sua conexão com a internet e tente novamente</li>
+                <li><strong>Limite Excedido:</strong> Verifique se o valor não excede o limite do seu cartão</li>
+            </ul>
+        </div>
+
+        <div id="actions">
+            <button onclick="tentarNovamente()">Tentar Novamente</button>
+            <button onclick="window.location.href='/'">Voltar à Loja</button>
+            <button onclick="entrarEmContato()">Entrar em Contato</button>
+        </div>
+
+        <div id="support">
+            <h4>Precisa de Ajuda?</h4>
+            <p>Nossa equipe está pronta para ajudar:</p>
+            <p>📧 Email: suporte@loja.com</p>
+            <p>📞 Telefone: (11) 1234-5678</p>
+            <p>💬 Chat: Disponível 24/7</p>
+            <p><strong>Horário de Atendimento:</strong> Segunda a Sexta, 8h às 18h</p>
+        </div>
+
+        <div id="faq">
+            <h4>Dúvidas Frequentes</h4>
+            <details>
+                <summary>Por que meu cartão foi recusado?</summary>
+                <p>Isso pode acontecer por diversos motivos: dados incorretos, limite insuficiente, cartão bloqueado ou vencido. Entre em contato com seu banco para mais informações.</p>
+            </details>
+            
+            <details>
+                <summary>Quanto tempo demora para tentar novamente?</summary>
+                <p>Você pode tentar imediatamente. Se o problema persistir, aguarde alguns minutos antes de uma nova tentativa.</p>
+            </details>
+            
+            <details>
+                <summary>Meu dinheiro foi debitado?</summary>
+                <p>Se o pagamento foi rejeitado, nenhum valor foi debitado. Em caso de dúvidas, verifique seu extrato ou entre em contato conosco.</p>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        // Extrair parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const paymentId = urlParams.get('payment_id');
+        const errorCode = urlParams.get('error_code');
+
+        // Mostrar detalhes do erro se disponíveis
+        if (error) {
+            document.getElementById('error-description').textContent = decodeURIComponent(error);
+        }
+
+        if (paymentId) {
+            document.getElementById('payment-id').textContent = paymentId;
+            document.getElementById('error-details').style.display = 'block';
+        }
+
+        if (errorCode) {
+            document.getElementById('error-code').textContent = errorCode;
+            document.getElementById('technical-error').textContent = getErrorDescription(errorCode);
+        }
+
+        function getErrorDescription(code) {
+            const errorDescriptions = {
+                'cc_rejected_insufficient_amount': 'Limite insuficiente no cartão',
+                'cc_rejected_bad_filled_date': 'Data de validade incorreta',
+                'cc_rejected_bad_filled_other': 'Dados do cartão incorretos',
+                'cc_rejected_bad_filled_security_code': 'Código de segurança incorreto',
+                'cc_rejected_blacklist': 'Cartão na lista restrita',
+                'cc_rejected_call_for_authorize': 'Autorização necessária do banco',
+                'cc_rejected_card_disabled': 'Cartão desabilitado',
+                'cc_rejected_duplicated_payment': 'Pagamento duplicado',
+                'cc_rejected_high_risk': 'Transação de alto risco'
+            };
+            
+            return errorDescriptions[code] || 'Erro não identificado';
+        }
+
+        function tentarNovamente() {
+            // Voltar para a página anterior ou home
+            if (document.referrer && document.referrer.includes(window.location.hostname)) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        function entrarEmContato() {
+            const subject = 'Erro no Pagamento';
+            const body = `Olá, tive um problema com meu pagamento.%0D%0A%0D%0ADetalhes:%0D%0A- ID do Pagamento: ${paymentId || 'N/A'}%0D%0A- Erro: ${error || 'N/A'}%0D%0A- Código: ${errorCode || 'N/A'}`;
+            
+            window.location.href = `mailto:suporte@loja.com?subject=${subject}&body=${body}`;
+        }
+
+        // Verificar se há dados no localStorage para recuperar a tentativa
+        const dadosCheckout = localStorage.getItem('ultimo_checkout');
+        if (dadosCheckout) {
+            // Mostrar opção de recuperar dados
+            const recoveryDiv = document.createElement('div');
+            recoveryDiv.innerHTML = `
+                <h4>Recuperar Última Tentativa</h4>
+                <p>Detectamos que você estava fazendo uma compra. Deseja recuperar os dados?</p>
+                <button onclick="recuperarDados()">Sim, Recuperar</button>
+                <button onclick="limparDados()">Não, Começar do Zero</button>
+            `;
+            document.getElementById('actions').appendChild(recoveryDiv);
+        }
+
+        function recuperarDados() {
+            const dados = JSON.parse(localStorage.getItem('ultimo_checkout'));
+            // Implementar lógica para preencher formulário com dados salvos
+            window.location.href = '/#checkout';
+        }
+
+        function limparDados() {
+            localStorage.removeItem('ultimo_checkout');
+            location.reload();
+        }
+    </script>
+</body>
+</html>

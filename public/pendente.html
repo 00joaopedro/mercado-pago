@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento PIX Pendente</title>
+</head>
+<body>
+    <div id="pending-container">
+        <h1>⏳ Aguardando Pagamento PIX</h1>
+        
+        <div id="payment-info">
+            <h2>Finalize seu Pagamento</h2>
+            <p><strong>ID do Pagamento:</strong> <span id="payment-id"></span></p>
+            <p><strong>Status:</strong> <span id="status">Pendente</span></p>
+            <p><strong>Valor:</strong> <span id="amount"></span></p>
+        </div>
+
+        <div id="pix-instructions">
+            <h3>Como Pagar com PIX</h3>
+            <ol>
+                <li>Abra o app do seu banco</li>
+                <li>Escolha a opção PIX</li>
+                <li>Escaneie o QR Code abaixo OU copie o código PIX</li>
+                <li>Confirme o pagamento</li>
+                <li>Aguarde a confirmação (geralmente instantânea)</li>
+            </ol>
+        </div>
+
+        <div id="qr-code-section">
+            <h3>QR Code PIX</h3>
+            <div id="qr-code-container">
+                <div id="qr-code-placeholder">
+                    <p>Carregando QR Code...</p>
+                </div>
+            </div>
+            
+            <div id="pix-copy-paste">
+                <h4>Ou copie o código PIX:</h4>
+                <div id="pix-code-container">
+                    <input type="text" id="pix-code" readonly>
+                    <button onclick="copiarPix()">Copiar</button>
+                </div>
+                <p id="copy-feedback" style="display:none; color:green;">Código copiado!</p>
+            </div>
+        </div>
+
+        <div id="timer-section">
+            <h3>Tempo Limite</h3>
+            <p>Este PIX expira em: <strong id="countdown">30:00</strong></p>
+            <div id="progress-bar">
+                <div id="progress" style="width: 100%; height: 10px; background-color: #4CAF50; transition: width 1s;"></div>
+            </div>
+        </div>
+
+        <div id="status-check">
+            <h3>Verificação Automática</h3>
+            <p id="check-status">Verificando pagamento...</p>
+            <div id="check-indicator">
+                <span id="check-dot">●</span>
+                <span>Aguardando confirmação</span>
+            </div>
+        </div>
+
+        <div id="actions">
+            <button onclick="verificarPagamento()">Verificar Pagamento</button>
+            <button onclick="gerarNovoPix()">Gerar Novo PIX</button>
+            <button onclick="window.location.href='/'">Cancelar e Voltar</button>
+        </div>
+
+        <div id="faq-pix">
+            <h4>Dúvidas sobre PIX</h4>
+            <details>
+                <summary>Quanto tempo demora para confirmar?</summary>
+                <p>O PIX é instantâneo! Geralmente a confirmação acontece em segundos após o pagamento.</p>
+            </details>
+            
+            <details>
+                <summary>O PIX expirou, e agora?</summary>
+                <p>Clique em "Gerar Novo PIX" para criar um novo código. O valor e condições permanecem os mesmos.</p>
+            </details>
+            
+            <details>
+                <summary>Paguei mas não foi confirmado</summary>
+                <p>Aguarde alguns instantes e clique em "Verificar Pagamento". Se o problema persistir, entre em contato conosco.</p>
+            </details>
+
+            <details>
+                <summary>Posso pagar com outro método?</summary>
+                <p>Sim! Clique em "Cancelar e Voltar" para escolher outro método de pagamento como cartão de crédito.</p>
+            </details>
+        </details>
+
+        <div id="support-pix">
+            <h4>Precisa de Ajuda?</h4>
+            <p>📧 Email: suporte@loja.com</p>
+            <p>📞 Telefone: (11) 1234-5678</p>
+            <p>💬 WhatsApp: (11) 9876-5432</p>
+        </div>
+    </div>
+
+    <script>
+        let paymentId;
+        let checkInterval;
+        let countdownInterval;
+        let timeLeft = 30 * 60; // 30 minutos em segundos
+
+        // Extrair parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        paymentId = urlParams.get('payment_id');
+        const qrCode = urlParams.get('qr_code');
+        const amount = urlParams.get('amount');
+
+        // Inicializar página
+        if (paymentId) {
+            document.getElementById('payment-id').textContent = paymentId;
+        }
+
+        if (amount) {
+            document.getElementById('amount').textContent = `R$ ${parseFloat(amount).toFixed(2)}`;
+        }
+
+        if (qrCode) {
+            document.getElementById('pix-code').value = decodeURIComponent(qrCode);
+            // Aqui você pode usar uma biblioteca de QR Code para gerar a imagem
+            generateQRCode(decodeURIComponent(qrCode));
+        }
+
+        // Função para gerar QR Code (simulada - use uma biblioteca real como qrcode.js)
+        function generateQRCode(code) {
+            const container = document.getElementById('qr-code-placeholder');
+            container.innerHTML = `
+                <div style="width: 200px; height: 200px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <p>QR Code<br>${code.substring(0, 20)}...</p>
+                </div>
+            `;
+        }
+
+        // Copiar código PIX
+        function copiarPix() {
+            const pixCode = document.getElementById('pix-code');
+            pixCode.select();
+            pixCode.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            
+            const feedback = document.getElementById('copy-feedback');
+            feedback.style.display = 'block';
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 2000);
+        }
+
+        // Countdown timer
+        function startCountdown() {
+            countdownInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                document.getElementById('countdown').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Atualizar barra de progresso
+                const progress = (timeLeft / (30 * 60)) * 100;
+                document.getElementById('progress').style.width = progress + '%';
+                
+                if (progress < 25) {
+                    document.getElementById('progress').style.backgroundColor = '#f44336';
+                } else if (progress < 50) {
+                    document.getElementById('progress').style.backgroundColor = '#ff9800';
+                }
+                timeLeft--;
+                
+                if (timeLeft < 0) {
+                    clearInterval(countdownInterval);
+                    pixExpirado();
+                }
+            }, 1000);
+        }
+        function pixExpirado() {
+            document.getElementById('countdown').textContent = 'EXPIRADO';
+            document.getElementById('status').textContent = 'Expirado';
+            document.getElementById('check-status').textContent = 'PIX expirado. Gere um novo código.';
+            
+            // Desabilitar QR Code
+            document.getElementById('qr-code-container').style.opacity = '0.5';
+            document.getElementById('pix-code').style.opacity = '0.5';
+        }
+        // Verificar status do pagamento
+        async function verificarPagamento() {
+            if (!paymentId) return;
+            
+            try {
+                document.getElementById('check-status').textContent = 'Verificando...';
+                
+                const response = await fetch(`/payment-status/${paymentId}`);
+                const result = await response.json();
+                
+                document.getElementById('status').textContent = result.status;
+                
+                if (result.status === 'approved') {
+                    clearInterval(checkInterval);
+                    clearInterval(countdownInterval);
+                    window.location.href = `/sucesso?payment_id=${paymentId}`;
+                } else if (result.status === 'rejected') {
+                    clearInterval(checkInterval);
+                    clearInterval(countdownInterval);
+                    window.location.href = `/erro?payment_id=${paymentId}&error=Pagamento rejeitado`;
+                } else {
+                    document.getElementById('check-status').textContent = 'Aguardando pagamento...';
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+                document.getElementById('check-status').textContent = 'Erro ao verificar. Tente novamente.';
+            }
+        }
+        // Verificação automática a cada 5 segundos
+        function startAutoCheck() {
+            checkInterval = setInterval(verificarPagamento, 5000);
+        }
+        // Gerar novo PIX
+        async function gerarNovoPix() {
+            try {
+                const response = await fetch(`/regenerate-pix/${paymentId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Atualizar códigos
+                    document.getElementById('pix-code').value = result.qr_code;
+                    generateQRCode(result.qr_code);
+                    
+                    // Resetar timer
+                    clearInterval(countdownInterval);
+                    timeLeft = 30 * 60;
+                    startCountdown();
+                    
+                    // Resetar status
+                    document.getElementById('status').textContent = 'Pendente';
+                    document.getElementById('qr-code-container').style.opacity = '1';
+                    document.getElementById('pix-code').style.opacity = '1';
+                    
+                } else {
+                    alert('Erro ao gerar novo PIX. Tente novamente.');
+                }
+            } catch (error) {
+                console.error('Erro ao gerar novo PIX:', error);
+                alert('Erro de conexão. Tente novamente.');
+            }
+        }
+        // Animação do indicador de verificação
+        function animateCheckIndicator() {
+            const dot = document.getElementById('check-dot');
+            let opacity = 1;
+            let direction = -0.1;
+            
+            setInterval(() => {
+                opacity += direction;
+                if (opacity <= 0.3 || opacity >= 1) {
+                    direction *= -1;
+                }
+                dot.style.opacity = opacity;
+            }, 100);
+        }
+
+        // Inicializar tudo
+        startCountdown();
+        startAutoCheck();
+        animateCheckIndicator();
+        
+        // Limpar intervals quando sair da página
+        window.addEventListener('beforeunload', () => {
+            clearInterval(checkInterval);
+            clearInterval(countdownInterval);
+        });
+    </script>
+</body>
+</html>

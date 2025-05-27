@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Aprovado!</title>
+</head>
+<body>
+    <div id="success-container">
+        <h1>✅ Pagamento Aprovado!</h1>
+        
+        <div id="payment-details">
+            <h2>Detalhes do Pagamento</h2>
+            <p><strong>ID do Pagamento:</strong> <span id="payment-id"></span></p>
+            <p><strong>Status:</strong> Aprovado</p>
+            <p><strong>Data:</strong> <span id="payment-date"></span></p>
+        </div>
+
+        <div id="next-steps">
+            <h3>Próximos Passos</h3>
+            <ul>
+                <li>Você receberá um email de confirmação em breve</li>
+                <li>Seu produto será processado e enviado</li>
+                <li>Acompanhe o status do pedido pelo email fornecido</li>
+            </ul>
+        </div>
+
+        <div id="actions">
+            <button onclick="window.location.href='/'">Voltar à Loja</button>
+            <button onclick="window.print()">Imprimir Comprovante</button>
+        </div>
+
+        <div id="support">
+            <h4>Precisa de Ajuda?</h4>
+            <p>Entre em contato conosco:</p>
+            <p>📧 Email: suporte@loja.com</p>
+            <p>📞 Telefone: (11) 1234-5678</p>
+        </div>
+    </div>
+
+    <script>
+        // Extrair parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('payment_id');
+        
+        if (paymentId) {
+            document.getElementById('payment-id').textContent = paymentId;
+        }
+        
+        // Definir data atual
+        const now = new Date();
+        document.getElementById('payment-date').textContent = now.toLocaleString('pt-BR');
+
+        // Verificar status do pagamento periodicamente (opcional)
+        async function verificarStatus() {
+            if (!paymentId) return;
+            
+            try {
+                const response = await fetch(`/payment-status/${paymentId}`);
+                const result = await response.json();
+                
+                if (result.status !== 'approved') {
+                    // Se status mudou, redirecionar
+                    if (result.status === 'rejected') {
+                        window.location.href = `/erro?payment_id=${paymentId}`;
+                    } else if (result.status === 'pending') {
+                        window.location.href = `/pendente?payment_id=${paymentId}`;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+            }
+        }
+
+        // Verificar status a cada 30 segundos
+        setInterval(verificarStatus, 30000);
+    </script>
+</body>
+</html>
